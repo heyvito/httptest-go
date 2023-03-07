@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"math/rand"
@@ -17,7 +18,7 @@ import (
 	"time"
 	"unsafe"
 
-	"github.com/go-chi/chi"
+	"github.com/go-chi/chi/v5"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/zap"
 )
@@ -104,6 +105,7 @@ func WithForm(form url.Values) RequestMutator {
 		str := form.Encode()
 		nr.Header.Add("Content-Type", "application/x-www-form-urlencoded")
 		nr.Header.Add("Content-Length", strconv.Itoa(len(str)))
+		nr.ContentLength = int64(len(str))
 		if nr.Method == "" || nr.Method == "GET" {
 			nr.Method = "POST"
 		}
@@ -128,6 +130,26 @@ func WithHeader(key, value string) RequestMutator {
 	return func(r *http.Request) *http.Request {
 		nr := CloneRequest(r)
 		nr.Header.Add(key, value)
+		return nr
+	}
+}
+
+// WithMethod sets a given method as the HTTP method of the request.
+func WithMethod(method string) RequestMutator {
+	return func(r *http.Request) *http.Request {
+		nr := CloneRequest(r)
+		nr.Method = method
+		return nr
+	}
+}
+
+// WithContentLength sets the Content-Length header of the current request and
+// its internal ContentLength field as the value provided.
+func WithContentLength(len int64) RequestMutator {
+	return func(r *http.Request) *http.Request {
+		nr := CloneRequest(r)
+		nr.Header.Add("Content-Length", fmt.Sprintf("%d", len))
+		nr.ContentLength = len
 		return nr
 	}
 }
@@ -187,13 +209,13 @@ func EmptyRequestHandler() http.Handler {
 // and header generated randomly by the handler.
 //
 // For instance:
-// 		assertion, handler := test.PassThroughRequestHandler()
-//		resp := test.ExecuteMiddlewareWithRequest(
-//			test.EmptyRequest(),
-//			handler,
-//			ARandomMiddleware{})
-//		assertion(t, resp)
 //
+//	assertion, handler := test.PassThroughRequestHandler()
+//	resp := test.ExecuteMiddlewareWithRequest(
+//		test.EmptyRequest(),
+//		handler,
+//		ARandomMiddleware{})
+//	assertion(t, resp)
 func PassThroughRequestHandler() (func(*testing.T, *http.Response), http.Handler) {
 	body := unsafeRandomStringWithSize(128)
 	headerName := unsafeRandomStringWithSize(12)

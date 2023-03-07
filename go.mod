@@ -3,7 +3,7 @@ module github.com/heyvito/httptest-go
 go 1.19
 
 require (
-	github.com/go-chi/chi v1.5.2
+	github.com/go-chi/chi/v5 v5.0.8
 	github.com/stretchr/testify v1.8.2
 	go.uber.org/zap v1.24.0
 )
